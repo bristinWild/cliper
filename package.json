@@ -1,0 +1,10 @@
+{
+  "name": "@bristinwild/cliper",
+  "version": "1.0.2",
+  "description": "AI context doc generator for developers",
+  "main": "index.js",
+  "bin": {
+    "cliper": "index.js"
+  },
+  "license": "ISC"
+}
