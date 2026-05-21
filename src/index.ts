@@ -17,6 +17,7 @@ program
   .command("init")
   .description("Scan project and generate context document")
   .option("-p, --path <path>", "Project root path", process.cwd())
+  .option("--max-file-size <kb>", "Max file size to include in KB", (v) => parseInt(v), 50)
   .action(initCommand);
 
 program

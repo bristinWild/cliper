@@ -14,6 +14,7 @@ export interface ContextDocOptions {
   references: ResolvedReference[];
   gaps: Gap[];
   generatedAt: string;
+  dependencyMap: string;
 }
 
 const DIVIDER = "━".repeat(50);
@@ -145,6 +146,12 @@ ${DIVIDER}
 ## GIT CONTEXT
 
 ${formatGitContext(opts.gitContext)}
+
+${DIVIDER}
+
+## DEPENDENCY MAP
+
+${opts.dependencyMap}
 
 ${DIVIDER}
 

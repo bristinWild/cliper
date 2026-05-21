@@ -186,15 +186,46 @@ cliper export --format txt   # plain text version for models that prefer it
 
 ## Installation
 
+### Option A — npx (recommended, no install needed)
+
+Run Cliper directly in any project without installing anything:
+
+```bash
+npx @bristinwild/cliper init
+```
+
+npx always pulls the latest version and leaves zero footprint in your project.
+
+### Option B — Global install (use `cliper` everywhere)
+
+Install once, use in any project without the `npx` prefix:
+
 ```bash
 npm install -g @bristinwild/cliper
 ```
 
-Initialize in any project:
+Then in any project:
 ```bash
 cd your-project
 cliper init
 ```
+
+### Option C — Shell alias (best of both worlds)
+
+Add to your `~/.zshrc` or `~/.bashrc`:
+
+```bash
+alias cliper="npx @bristinwild/cliper"
+```
+
+Then reload your shell:
+```bash
+source ~/.zshrc
+```
+
+Now `cliper init` works everywhere with no global install and always uses the latest version.
+
+> **Never run `npm install @bristinwild/cliper` inside your project directory.** This installs Cliper as a project dependency and pollutes your `node_modules`. Always use npx or a global install.
 
 ---
 

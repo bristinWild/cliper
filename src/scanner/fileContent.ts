@@ -3,7 +3,7 @@ import * as path from "path";
 import { glob } from "glob";
 import ignore from "ignore";
 
-const MAX_FILE_SIZE_BYTES = 50 * 1024; // 50KB per file
+
 const MAX_TOTAL_CHARS = 150_000;
 
 const BINARY_EXTENSIONS = new Set([
@@ -30,6 +30,8 @@ function getPriority(filePath: string): number {
   return idx === -1 ? 999 : idx;
 }
 
+
+
 export interface FileContent {
   relativePath: string;
   content: string;
@@ -40,8 +42,10 @@ export interface FileContent {
 export async function extractFileContents(
   projectRoot: string,
   activeScope: string[],
-  watchedScope: string[]
+  watchedScope: string[],
+  maxFileSizeKB: number = 50
 ): Promise<FileContent[]> {
+  const MAX_FILE_SIZE_BYTES = maxFileSizeKB * 1024;
   const ig = ignore();
   const gitignorePath = path.join(projectRoot, ".gitignore");
   if (fs.existsSync(gitignorePath)) {

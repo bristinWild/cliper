@@ -1,3 +1,4 @@
+import { buildDependencyMap, formatDependencyMap } from "../scanner/dependencies";
 import * as fs from "fs";
 import * as path from "path";
 import simpleGit from "simple-git";
@@ -12,9 +13,13 @@ import { resolveBlockedReferences } from "../resolver/urlFetcher";
 import { detectGaps } from "../gaps/detector";
 import { buildContextDoc } from "../context/builder";
 
+
+
 interface InitOptions {
   path: string;
+  maxFileSize?: number;
 }
+
 
 export async function initCommand(options: InitOptions): Promise<void> {
   const projectRoot = path.resolve(options.path);
@@ -47,7 +52,13 @@ export async function initCommand(options: InitOptions): Promise<void> {
 
   // Step 3: Extract file contents
   const contentSpinner = ora("Extracting file contents within scope...").start();
-  const files = await extractFileContents(projectRoot, scopeConfig.active, scopeConfig.watched);
+  const files = await extractFileContents(
+    projectRoot,
+    scopeConfig.active,
+    scopeConfig.watched,
+    options.maxFileSize ?? 50
+  );
+
   contentSpinner.succeed(chalk.green(`Extracted ${files.length} files`));
 
   // Step 4: Git context
@@ -66,7 +77,11 @@ export async function initCommand(options: InitOptions): Promise<void> {
   const failed = references.filter((r) => r.status === "failed").length;
   refSpinner.succeed(chalk.green(`References: ${fetched} fetched, ${failed} failed`));
 
+
   // Step 6: Detect gaps
+
+
+
   const gapSpinner = ora("Detecting gaps and undocumented patterns...").start();
   const gaps = detectGaps(files, projectRoot);
   gapSpinner.succeed(
@@ -74,6 +89,9 @@ export async function initCommand(options: InitOptions): Promise<void> {
       ? chalk.yellow(`Found ${gaps.length} gaps (${gaps.filter((g) => g.severity === "high").length} high priority)`)
       : chalk.green("No significant gaps detected")
   );
+  const depSpinner = ora("Mapping dependencies...").start();
+  const dependencyMap = buildDependencyMap(files);
+  depSpinner.succeed(chalk.green(`Dependency map: ${dependencyMap.edges.length} edges, ${dependencyMap.externalPackages.length} external packages`));
 
   // Step 7: Build context doc
   const buildSpinner = ora("Building context document...").start();
@@ -89,6 +107,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     references,
     gaps,
     generatedAt: new Date().toISOString(),
+    dependencyMap: formatDependencyMap(dependencyMap),
   });
 
   // Step 8: Write to disk
@@ -102,9 +121,9 @@ export async function initCommand(options: InitOptions): Promise<void> {
   const gitignorePath = path.join(projectRoot, ".gitignore");
 
   const entriesToEnsure: Array<{ check: string; line: string }> = [
-    { check: "node_modules",      line: "node_modules/" },
+    { check: "node_modules", line: "node_modules/" },
     { check: "package-lock.json", line: "package-lock.json" },
-    { check: ".cliper/cache",     line: ".cliper/cache/" },
+    { check: ".cliper/cache", line: ".cliper/cache/" },
   ];
 
   let gitignoreContent = fs.existsSync(gitignorePath)
