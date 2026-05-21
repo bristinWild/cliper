@@ -6,11 +6,12 @@ import { syncCommand } from "./commands/sync";
 import { scopeCommand } from "./commands/scope";
 import { statusCommand } from "./commands/status";
 import { exportCommand } from "./commands/export";
+const { version } = require("../package.json");
 
 program
   .name("cliper")
   .description("AI context doc generator for developers")
-  .version("1.1.0");
+  .version(version);
 
 program
   .command("init")

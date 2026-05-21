@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import simpleGit from "simple-git";
 import chalk from "chalk";
 import ora from "ora";
 import { autoDetectScope } from "../scope/autoScope";
@@ -97,13 +98,45 @@ export async function initCommand(options: InitOptions): Promise<void> {
   fs.writeFileSync(contextPath, contextDoc, "utf-8");
   buildSpinner.succeed(chalk.green("Context document built"));
 
-  // Add .cliper/cache to .gitignore if needed
+  // Auto-manage .gitignore — add anything cliper introduces that shouldn't be committed
   const gitignorePath = path.join(projectRoot, ".gitignore");
-  if (fs.existsSync(gitignorePath)) {
-    const gitignore = fs.readFileSync(gitignorePath, "utf-8");
-    if (!gitignore.includes(".cliper/cache")) {
-      fs.appendFileSync(gitignorePath, "\n# Cliper cache\n.cliper/cache/\n");
+
+  const entriesToEnsure: Array<{ check: string; line: string }> = [
+    { check: "node_modules",      line: "node_modules/" },
+    { check: "package-lock.json", line: "package-lock.json" },
+    { check: ".cliper/cache",     line: ".cliper/cache/" },
+  ];
+
+  let gitignoreContent = fs.existsSync(gitignorePath)
+    ? fs.readFileSync(gitignorePath, "utf-8")
+    : "";
+
+  const missingEntries = entriesToEnsure.filter((e) => !gitignoreContent.includes(e.check));
+
+  if (missingEntries.length > 0) {
+    const block = "\n# Cliper — auto-managed\n" + missingEntries.map((e) => e.line).join("\n") + "\n";
+    if (fs.existsSync(gitignorePath)) {
+      fs.appendFileSync(gitignorePath, block);
+    } else {
+      fs.writeFileSync(gitignorePath, block.trimStart());
     }
+  }
+
+  // Remove node_modules from git tracking if accidentally staged
+  try {
+    const gitInstance = simpleGit(projectRoot);
+    const tracked = await gitInstance.raw(["ls-files", "node_modules"]);
+    if (tracked.trim().length > 0) {
+      await gitInstance.raw(["rm", "-r", "--cached", "node_modules/"]);
+      console.log(chalk.yellow("  ⚡ Removed node_modules from git tracking"));
+    }
+    const lockTracked = await gitInstance.raw(["ls-files", "package-lock.json"]);
+    if (lockTracked.trim().length > 0) {
+      await gitInstance.raw(["rm", "--cached", "package-lock.json"]);
+      console.log(chalk.yellow("  ⚡ Removed package-lock.json from git tracking"));
+    }
+  } catch {
+    // Not a git repo or already clean — skip silently
   }
 
   // Summary
