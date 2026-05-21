@@ -1,0 +1,121 @@
+import * as fs from "fs";
+import * as path from "path";
+import chalk from "chalk";
+import ora from "ora";
+import { autoDetectScope } from "../scope/autoScope";
+import { loadScopeConfig, saveScopeConfig, getCliperDir } from "../scope/config";
+import { generateFileTree } from "../scanner/fileTree";
+import { extractFileContents } from "../scanner/fileContent";
+import { getGitContext } from "../scanner/gitContext";
+import { resolveBlockedReferences } from "../resolver/urlFetcher";
+import { detectGaps } from "../gaps/detector";
+import { buildContextDoc } from "../context/builder";
+
+interface InitOptions {
+  path: string;
+}
+
+export async function initCommand(options: InitOptions): Promise<void> {
+  const projectRoot = path.resolve(options.path);
+
+  if (!fs.existsSync(projectRoot)) {
+    console.error(chalk.red(`Project path not found: ${projectRoot}`));
+    process.exit(1);
+  }
+
+  console.log(chalk.bold.cyan("\n  cliper init\n"));
+  console.log(chalk.gray(`  Project: ${projectRoot}\n`));
+
+  // Step 1: Load or create scope config
+  const spinner = ora("Detecting scope from git activity...").start();
+  let scopeConfig = loadScopeConfig(projectRoot);
+
+  // Always re-run auto-detection and merge with any manual additions
+  const autoScope = await autoDetectScope(projectRoot);
+  const manualAdditions = scopeConfig.active.filter((p) => !autoScope.includes(p));
+  scopeConfig.active = [...new Set([...autoScope, ...manualAdditions])];
+  saveScopeConfig(projectRoot, scopeConfig);
+  spinner.succeed(
+    chalk.green(`Scope detected: ${scopeConfig.active.length} paths active, ${scopeConfig.watched.length} watched`)
+  );
+
+  // Step 2: Generate file tree
+  const treeSpinner = ora("Building annotated file tree...").start();
+  const fileTree = generateFileTree(projectRoot, scopeConfig.active, scopeConfig.watched);
+  treeSpinner.succeed(chalk.green("File tree built"));
+
+  // Step 3: Extract file contents
+  const contentSpinner = ora("Extracting file contents within scope...").start();
+  const files = await extractFileContents(projectRoot, scopeConfig.active, scopeConfig.watched);
+  contentSpinner.succeed(chalk.green(`Extracted ${files.length} files`));
+
+  // Step 4: Git context
+  const gitSpinner = ora("Reading git context...").start();
+  const gitContext = await getGitContext(projectRoot);
+  gitSpinner.succeed(
+    gitContext.isGitRepo
+      ? chalk.green(`Git: ${gitContext.branch} — ${gitContext.lastCommit?.message ?? "no commits"}`)
+      : chalk.yellow("Not a git repository")
+  );
+
+  // Step 5: Resolve blocked references
+  const refSpinner = ora("Fetching blocked external references...").start();
+  const references = await resolveBlockedReferences(projectRoot);
+  const fetched = references.filter((r) => r.status === "fetched").length;
+  const failed = references.filter((r) => r.status === "failed").length;
+  refSpinner.succeed(chalk.green(`References: ${fetched} fetched, ${failed} failed`));
+
+  // Step 6: Detect gaps
+  const gapSpinner = ora("Detecting gaps and undocumented patterns...").start();
+  const gaps = detectGaps(files, projectRoot);
+  gapSpinner.succeed(
+    gaps.length > 0
+      ? chalk.yellow(`Found ${gaps.length} gaps (${gaps.filter((g) => g.severity === "high").length} high priority)`)
+      : chalk.green("No significant gaps detected")
+  );
+
+  // Step 7: Build context doc
+  const buildSpinner = ora("Building context document...").start();
+  const projectName = path.basename(projectRoot);
+  const contextDoc = buildContextDoc({
+    projectRoot,
+    projectName,
+    activeScope: scopeConfig.active,
+    watchedScope: scopeConfig.watched,
+    fileTree,
+    files,
+    gitContext,
+    references,
+    gaps,
+    generatedAt: new Date().toISOString(),
+  });
+
+  // Step 8: Write to disk
+  const cliperDir = getCliperDir(projectRoot);
+  if (!fs.existsSync(cliperDir)) fs.mkdirSync(cliperDir, { recursive: true });
+  const contextPath = path.join(cliperDir, "context.md");
+  fs.writeFileSync(contextPath, contextDoc, "utf-8");
+  buildSpinner.succeed(chalk.green("Context document built"));
+
+  // Add .cliper/cache to .gitignore if needed
+  const gitignorePath = path.join(projectRoot, ".gitignore");
+  if (fs.existsSync(gitignorePath)) {
+    const gitignore = fs.readFileSync(gitignorePath, "utf-8");
+    if (!gitignore.includes(".cliper/cache")) {
+      fs.appendFileSync(gitignorePath, "\n# Cliper cache\n.cliper/cache/\n");
+    }
+  }
+
+  // Summary
+  const sizeKB = Math.round(Buffer.byteLength(contextDoc, "utf-8") / 1024);
+  const estimatedTokens = Math.round(contextDoc.length / 4);
+
+  console.log(chalk.bold.green("\n  ✓ Context document ready\n"));
+  console.log(chalk.gray(`  Location:  ${contextPath}`));
+  console.log(chalk.gray(`  Size:      ${sizeKB}KB (~${estimatedTokens.toLocaleString()} tokens)`));
+  console.log(chalk.gray(`  Files:     ${files.length} files in context`));
+  console.log(chalk.gray(`  Gaps:      ${gaps.length} detected\n`));
+  console.log(chalk.cyan("  Copy to clipboard:"));
+  console.log(chalk.white("    cliper export | pbcopy        # macOS"));
+  console.log(chalk.white("    cliper export | xclip         # Linux\n"));
+}
