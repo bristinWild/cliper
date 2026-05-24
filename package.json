@@ -1,7 +1,7 @@
 {
-  "name": "@bristinwild/cliper",
-  "version": "1.1.9",
-  "description": "AI context doc generator for developers",
+  "name": "@cliperhq/cliper",
+  "version": "1.0.0",
+  "description": "Generate rich, AI-ready context documents from your codebase. Always fresh, always scoped — for Claude, ChatGPT, and beyond.",
   "main": "dist/index.js",
   "bin": {
     "cliper": "./dist/index.js"

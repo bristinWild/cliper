@@ -1,186 +1,18 @@
 # Cliper
 
-> Give AI the full picture of your codebase — always fresh, always scoped, always honest about what it doesn't know.
+> Generate rich, AI-ready context documents from your codebase — always fresh, always scoped, always honest about what it doesn't know.
 
-**npm:** `@bristinwild/cliper` | **CLI command:** `cliper`
+**npm:** `@cliperhq/cliper` | **CLI:** `cliper` | **Version:** 1.0.0
 
 ---
 
 ## What is Cliper?
 
-Cliper is a CLI tool for developers that generates a rich, structured context document from your codebase — purpose-built to be passed into AI coding sessions (Claude, ChatGPT, Gemini, etc).
+Every time you start an AI coding session, you waste time re-explaining your project — pasting file contents, describing structure, warning the AI about legacy decisions, and hoping it doesn't miss something critical.
 
-The problem it solves: every time you start an AI coding session, you waste time re-explaining your project structure, re-pasting file contents, warning the AI about legacy decisions, and hoping it doesn't miss something critical. Cliper eliminates that tax entirely.
+Cliper eliminates that tax entirely.
 
 One command. Your AI has full, accurate, scoped context. You go straight to building.
-
----
-
-## Core Philosophy
-
-- **Developer-first.** Built for the person writing code, not managers or stakeholders.
-- **Scoped, not exhaustive.** Cliper doesn't dump your entire codebase. It sends what's relevant.
-- **Living, not static.** Context stays fresh as your codebase evolves.
-- **Honest about gaps.** Cliper surfaces what even you might have forgotten — before the AI runs with incomplete information.
-
----
-
-## Features
-
-### 1. Context Document Generation (`cliper init`)
-Scans your project and produces a structured `.cliper/context.md` file containing:
-
-- Annotated folder structure (scoped, not a raw tree dump)
-- Key file contents within the active scope
-- Dependency map (what imports what)
-- README content with blocked/inaccessible URLs fetched and inlined as text
-- Git context (current branch, recent commits, open changes)
-- Detected gaps (undocumented patterns, implicit dependencies, missing comments)
-- Freshness timestamps per section
-
-This file is designed to be copy-pasted directly into any AI chat session as the first message.
-
----
-
-### 2. Smart Scoping (`cliper scope`)
-Cliper doesn't scan everything — it focuses on what matters.
-
-**Auto-scope (default):**
-- Detects recently modified files from git history
-- Includes config files, entry points, and package manifests automatically
-- Excludes `node_modules`, build artifacts, and `.gitignore`d paths
-
-**Manual scope:**
-- Developer can add specific files or directories to the active scope
-- Developer can add files to a watch list (files kept in context even outside active work)
-- Watch list is capped at ~15 additional files to keep context size manageable
-
-```bash
-cliper scope add src/payments/
-cliper scope watch config/database.ts
-cliper scope list
-cliper scope remove src/payments/
-```
-
----
-
-### 3. Living Context (`cliper sync`)
-Context goes stale the moment someone merges a PR. Cliper solves this with git-aware refresh.
-
-- Watches for git events (commits, merges, branch switches)
-- Diffs what changed against the existing context doc
-- Updates only stale sections — not a full rescan
-- Notifies: "Context updated — 2 modules changed, 1 new undocumented pattern detected"
-- Adds freshness indicators per section so the AI knows what's recent vs old
-
-```bash
-cliper sync              # manual refresh
-cliper sync --watch      # auto-refresh on git events
-```
-
----
-
-### 4. Gap Detection
-The hardest problem in AI-assisted coding isn't what you tell the AI — it's what you forget to tell it.
-
-Cliper scans for:
-- **Undocumented decisions** — unusual logic with no comments, no linked tickets
-- **Implicit dependencies** — modules that rely on runtime state or env vars not in config
-- **Tribal knowledge** — patterns that only make sense if you know the project history
-- **Stale references** — comments or docs that reference code that no longer exists
-
-These are surfaced in the context doc as a dedicated `DETECTED GAPS` section so the developer can review before starting an AI session.
-
----
-
-### 5. Blocked URL Resolution
-READMEs and docs often reference external links that AI models can't access (robots.txt blocks, paywalled content, private internal docs).
-
-Cliper handles this by:
-- Scanning all URLs found in project markdown files
-- Fetching inaccessible content locally at scan time
-- Inlining the fetched content directly into the context doc as text
-- Marking the source URL for reference
-
-The AI gets the content, not a broken link.
-
----
-
-## Context Document Format
-
-The output is a structured markdown file stored at `.cliper/context.md`.
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CLIPER CONTEXT DOCUMENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PROJECT:      payments-service
-GENERATED:    2026-05-22T01:30:00Z
-BRANCH:       feature/refund-flow
-LAST COMMIT:  fix: handle edge case in refund processor (2h ago)
-SCOPED TO:    src/payments/, src/shared/utils/, config/
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-## FOLDER STRUCTURE
-
-payments-service/
-├── src/
-│   ├── payments/              ← ACTIVE SCOPE
-│   │   ├── refund.ts          ← modified 2h ago
-│   │   ├── processor.ts       ← modified 3d ago
-│   │   └── types.ts
-│   ├── shared/
-│   │   └── utils/             ← WATCHED
-│   │       ├── currency.ts
-│   │       └── validators.ts
-│   └── auth/                  ← OUT OF SCOPE (3 files, last touched 3 weeks ago)
-├── config/                    ← WATCHED
-│   ├── env.example
-│   └── database.ts
-└── [14 other directories — out of scope]
-
-## KEY FILES
-[File contents of scoped files]
-
-## DEPENDENCY MAP
-[What imports what within scope]
-
-## GIT CONTEXT
-[Recent commits, open PRs, current branch state]
-
-## BLOCKED REFERENCES (fetched locally)
-[Inlined content from README links that were inaccessible to AI]
-
-## DETECTED GAPS
-[Undocumented patterns, implicit dependencies, missing context]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
----
-
-## CLI Reference
-
-```bash
-# Initialise Cliper in a project
-cliper init
-
-# Generate / refresh the context doc
-cliper sync
-cliper sync --watch          # auto-refresh on git events
-
-# Manage scope
-cliper scope add <path>      # add path to active scope
-cliper scope watch <path>    # add path to persistent watch list
-cliper scope remove <path>   # remove from scope
-cliper scope list            # show current scope
-
-# Inspect status
-cliper status                # what's fresh, what's stale, what's in scope
-
-# Output
-cliper export                # print context doc to stdout (pipe to clipboard etc.)
-cliper export --format txt   # plain text version for models that prefer it
-```
 
 ---
 
@@ -188,26 +20,18 @@ cliper export --format txt   # plain text version for models that prefer it
 
 ### Option A — npx (recommended, no install needed)
 
-Run Cliper directly in any project without installing anything:
-
 ```bash
-npx @bristinwild/cliper init
+npx @cliperhq/cliper init
 ```
 
 npx always pulls the latest version and leaves zero footprint in your project.
 
-### Option B — Global install (use `cliper` everywhere)
+### Option B — Global install
 
-Install once, use in any project without the `npx` prefix:
+Install once, use in any project:
 
 ```bash
-npm install -g @bristinwild/cliper
-```
-
-Then in any project:
-```bash
-cd your-project
-cliper init
+npm install -g @cliperhq/cliper
 ```
 
 ### Option C — Shell alias (best of both worlds)
@@ -215,139 +39,216 @@ cliper init
 Add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-alias cliper="npx @bristinwild/cliper"
+alias cliper="npx @cliperhq/cliper"
 ```
 
-Then reload your shell:
+Then reload:
 ```bash
 source ~/.zshrc
 ```
 
-Now `cliper init` works everywhere with no global install and always uses the latest version.
+> **Never run `npm install @cliperhq/cliper` inside your project directory.** This installs Cliper as a project dependency and pollutes your `node_modules`. Always use npx or a global install.
 
-> **Never run `npm install @bristinwild/cliper` inside your project directory.** This installs Cliper as a project dependency and pollutes your `node_modules`. Always use npx or a global install.
+---
+
+## Quick Start
+
+```bash
+# Go into any project
+cd your-project
+
+# Generate your first context document
+cliper init
+
+# Copy to clipboard and paste into Claude or ChatGPT
+cliper export | pbcopy        # macOS
+cliper export | xclip         # Linux
+
+# Generate an AI-optimized prompt (requires API key)
+export ANTHROPIC_API_KEY=your_key
+cliper analyze --model claude
+
+# Or for ChatGPT
+export OPENAI_API_KEY=your_key
+cliper analyze --model chatgpt
+```
+
+---
+
+## What Gets Generated
+
+Cliper scans your project and produces `.cliper/context.md` containing:
+
+### Annotated Folder Structure
+Not a raw `tree` dump — an annotated, scoped view showing what's active, what's watched, and when files were last modified.
+
+```
+your-project/
+├── src/
+│   ├── payments/              ← ACTIVE SCOPE
+│   │   ├── refund.ts          ← modified 2h ago
+│   │   └── processor.ts       ← modified 3d ago
+│   └── auth/                  ← out of scope (3 files, last touched 3 weeks ago)
+├── config/                    ← WATCHED
+└── [14 other directories — out of scope]
+```
+
+### Git Context
+Branch, recent commits, uncommitted changes — so the AI knows exactly where you are in the development timeline.
+
+### Dependency Map
+What imports what across your scoped files, entry points, and all external packages used. Supports TypeScript, JavaScript, Rust, and Python.
+
+### Key File Contents
+Full source of scoped files, prioritized by language and recency, with a configurable size limit.
+
+### Blocked Reference Resolution
+READMEs often link to external docs the AI can't access (robots.txt blocks, private pages). Cliper fetches them locally and inlines the content directly into the context doc. No broken links, no missing context.
+
+### Gap Detection
+What you forgot to tell the AI — undocumented functions, missing `.env` vars, TODO/FIXME comments, implicit dependencies. Surfaced before your session starts.
+
+### AI-Optimized Prompts
+`cliper analyze` takes the raw context doc and uses AI to reformat it into a model-specific prompt — tuned for how Claude reasons vs how ChatGPT processes structured input.
+
+---
+
+## CLI Reference
+
+```bash
+# Initialize — scan project and generate context document
+cliper init
+cliper init --max-file-size 200    # increase file size limit (default: 50KB)
+
+# Sync — refresh stale sections after changes
+cliper sync
+cliper sync --watch                # auto-refresh on every git commit
+
+# Scope — control what gets included
+cliper scope add src/payments/     # add directory to active scope
+cliper scope watch config/db.ts    # add file to persistent watch list
+cliper scope remove src/payments/  # remove from scope
+cliper scope list                  # show current scope
+
+# Status — check freshness and current state
+cliper status
+
+# Export — print context doc to stdout
+cliper export                      # markdown format
+cliper export --format txt         # plain text
+
+# Analyze — generate AI-optimized prompt from context doc
+cliper analyze --model claude      # optimized for Claude
+cliper analyze --model chatgpt     # optimized for ChatGPT
+```
+
+---
+
+## Language Support
+
+Cliper auto-detects your project type and scopes intelligently:
+
+| Language | Auto-detected from | Source dirs included |
+|---|---|---|
+| **Rust** | `Cargo.toml` | All workspace member `src/` dirs |
+| **TypeScript / JavaScript** | `package.json` | `src/`, `packages/`, `apps/`, `libs/` |
+| **Python** | `pyproject.toml` / `requirements.txt` | `src/`, dirs with `__init__.py` |
+| **Go** | `go.mod` | `internal/`, `pkg/`, `cmd/` |
 
 ---
 
 ## How to Use with AI Models
 
-After running `cliper init` or `cliper sync`:
+After running `cliper init`:
 
 **Option 1 — Copy and paste**
 ```bash
-cliper export | pbcopy     # macOS
+cliper export | pbcopy     # macOS — then paste as first message
 cliper export | xclip      # Linux
 ```
-Paste as the first message in your AI chat session.
 
-**Option 2 — Reference the file directly**
-Some AI tools (Cursor, Claude Projects, etc.) can reference files directly. Point them at `.cliper/context.md`.
-
-**Option 3 — Pipe into a prompt**
+**Option 2 — Use the optimized prompt**
 ```bash
-echo "$(cliper export)\n\nNow help me implement the refund webhook handler." | your-ai-cli
+cliper analyze --model claude
+cat .cliper/prompt-claude.md | pbcopy
 ```
+
+**Option 3 — Reference the file directly**
+Some tools (Cursor, Claude Projects) can reference files directly. Point them at `.cliper/context.md`.
 
 ---
 
 ## Project Architecture
 
 ```
-cliper/
-├── src/
-│   ├── commands/
-│   │   ├── init.ts          # cliper init — full project scan
-│   │   ├── sync.ts          # cliper sync — incremental refresh
-│   │   ├── scope.ts         # cliper scope — manage active scope
-│   │   ├── status.ts        # cliper status — freshness report
-│   │   └── export.ts        # cliper export — output context doc
-│   ├── scanner/
-│   │   ├── fileTree.ts      # folder structure generation + annotation
-│   │   ├── fileContent.ts   # scoped file content extraction
-│   │   ├── dependencies.ts  # import/dependency map generation
-│   │   └── gitContext.ts    # branch, commits, recent changes
-│   ├── resolver/
-│   │   ├── urlDetector.ts   # find all URLs in markdown files
-│   │   ├── urlFetcher.ts    # fetch and inline blocked content
-│   │   └── cache.ts         # local cache of fetched content
-│   ├── gaps/
-│   │   ├── detector.ts      # undocumented pattern detection
-│   │   ├── implicitDeps.ts  # implicit dependency surfacing
-│   │   └── staleness.ts     # stale reference detection
-│   ├── context/
-│   │   ├── builder.ts       # assembles final context doc
-│   │   ├── diff.ts          # diffs old vs new context for sync
-│   │   └── formatter.ts     # markdown formatting and structure
-│   ├── scope/
-│   │   ├── autoScope.ts     # git-activity-based auto scoping
-│   │   ├── manualScope.ts   # developer-defined scope management
-│   │   └── config.ts        # persists scope config in .cliper/
-│   └── utils/
-│       ├── gitWatch.ts      # git event watcher for auto-sync
-│       ├── ignore.ts        # respects .gitignore
-│       └── tokenEstimate.ts # estimates context doc token size
-├── .cliper/                 # generated, lives in the target project
-│   ├── context.md           # the context document
-│   ├── scope.json           # saved scope configuration
-│   └── cache/               # locally fetched URL content
-├── index.js                 # CLI entry point
-└── package.json
+src/
+├── commands/
+│   ├── init.ts          # cliper init — full project scan
+│   ├── sync.ts          # cliper sync — incremental refresh
+│   ├── scope.ts         # cliper scope — manage active scope
+│   ├── status.ts        # cliper status — freshness report
+│   ├── export.ts        # cliper export — output context doc
+│   └── analyze.ts       # cliper analyze — AI-optimized prompt generation
+├── scanner/
+│   ├── fileTree.ts      # annotated folder structure
+│   ├── fileContent.ts   # scoped file extraction with token cap
+│   ├── gitContext.ts    # branch, commits, uncommitted changes
+│   └── dependencies.ts  # import/dependency map (TS, JS, Rust, Python)
+├── resolver/
+│   └── urlFetcher.ts    # fetch and inline blocked external references
+├── gaps/
+│   └── detector.ts      # undocumented patterns, missing env vars, TODOs
+├── context/
+│   └── builder.ts       # assembles the final context.md
+└── scope/
+    ├── config.ts         # persists scope config in .cliper/
+    └── autoScope.ts      # language-aware auto-scoping from git activity
 ```
 
 ---
 
-## Key Technical Decisions
+## What Cliper Creates in Your Project
 
-**Language: TypeScript/Node.js**
-Developers already have Node installed. Same language as VS Code extensions, making the future extension a thin wrapper around this CLI.
+Running `cliper init` adds the following to your project:
 
-**Storage: Local + git-native**
-Context doc lives in `.cliper/context.md` inside the project repo. Committed to git — naturally versioned, naturally shared across the team. Sensitive content (fetched private URLs) stays in `.cliper/cache/` which is `.gitignore`d by default.
+```
+.cliper/
+├── context.md          # the context document — commit this
+├── scope.json          # your scope config — commit this
+├── prompt-claude.md    # generated prompt (cliper analyze) — gitignored
+├── prompt-gpt.md       # generated prompt (cliper analyze) — gitignored
+└── cache/              # locally fetched URL content — gitignored
+```
 
-**Scoping strategy**
-Auto-scope is derived from `git log --since="7 days ago" --name-only` to find recently touched files. This means Cliper's default scope always reflects what the developer is actively working on without any manual configuration.
-
-**Gap detection approach**
-Phase 1: Heuristic-based — files modified recently with no associated comments, functions with no JSDoc, env vars referenced but not in `.env.example`. Phase 2 (post-launch): Pattern-based learning from real codebases.
-
-**Token awareness**
-Cliper estimates the token size of the generated context doc and warns if it exceeds practical limits for common models (~100k tokens). Scope reduction suggestions are provided automatically.
+Cliper also automatically adds `node_modules/`, `package-lock.json`, and `.cliper/cache/` to your `.gitignore` — and removes them from git tracking if they were accidentally staged.
 
 ---
 
 ## Roadmap
 
-**Phase 1 — Core CLI (current)**
-- `cliper init` with folder structure, file contents, git context
-- Blocked URL resolution and inlining
-- Basic scoping
+**Shipped**
+- ✅ Language-aware auto-scoping (Rust, Node, Python, Go)
+- ✅ Annotated folder structure with freshness timestamps
+- ✅ Git-aware context (branch, commits, uncommitted changes)
+- ✅ Dependency map (TS/JS/Rust/Python)
+- ✅ Blocked URL resolution and inlining
+- ✅ Gap detection (TODOs, missing env vars, undocumented functions)
+- ✅ AI-optimized prompt generation (Claude + ChatGPT)
+- ✅ `--max-file-size` flag for large files
+- ✅ Auto-managed `.gitignore`
 
-**Phase 2 — Living Context**
-- `cliper sync` with git-aware incremental refresh
-- `cliper sync --watch` for auto-refresh
-- Freshness indicators per section
-
-**Phase 3 — Gap Detection**
-- Undocumented pattern detection
-- Implicit dependency surfacing
-- Pre-session gap warnings
-
-**Phase 4 — VS Code Extension**
-- Thin wrapper around the CLI
-- One-click context copy from the editor
-- Scope management from the sidebar
-- Auto-sync on file save
-
-**Phase 5 — Team Layer**
-- Shared context annotations committed to git
-- Senior dev annotations ("this module is being deprecated")
-- Per-developer scope profiles
+**Coming Soon**
+- ⬜ `cliper push` — sync context to the Cliper web dashboard
+- ⬜ Web dashboard — visual representation of your codebase context
+- ⬜ Project history — track how your codebase evolves over time
+- ⬜ Team sharing — shared context annotations committed to git
+- ⬜ VS Code extension — one-click context copy from the editor
 
 ---
 
 ## Contributing
 
-Cliper is early. If you're a developer who feels the pain of re-explaining your project to AI every session, contributions are very welcome.
+Cliper is early and actively developed. If you're a developer who feels the pain of re-explaining your project to AI every session, contributions are very welcome.
 
 ```bash
 git clone https://github.com/bristinwild/cliper
