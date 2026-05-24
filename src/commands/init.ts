@@ -124,6 +124,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     { check: "node_modules", line: "node_modules/" },
     { check: "package-lock.json", line: "package-lock.json" },
     { check: ".cliper/cache", line: ".cliper/cache/" },
+    { check: ".cliper/prompt-", line: ".cliper/prompt-*.md" },
   ];
 
   let gitignoreContent = fs.existsSync(gitignorePath)

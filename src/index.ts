@@ -6,6 +6,7 @@ import { syncCommand } from "./commands/sync";
 import { scopeCommand } from "./commands/scope";
 import { statusCommand } from "./commands/status";
 import { exportCommand } from "./commands/export";
+import { analyzeCommand } from "./commands/analyze";
 const { version } = require("../package.json");
 
 program
@@ -43,5 +44,11 @@ program
   .description("Print context doc to stdout")
   .option("--format <format>", "Output format: md or txt", "md")
   .action(exportCommand);
+
+program
+  .command("analyze")
+  .description("Analyze context doc and generate optimized AI prompt")
+  .requiredOption("--model <model>", "Target model: claude or chatgpt")
+  .action(analyzeCommand);
 
 program.parse(process.argv);
