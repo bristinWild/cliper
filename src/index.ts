@@ -7,6 +7,10 @@ import { scopeCommand } from "./commands/scope";
 import { statusCommand } from "./commands/status";
 import { exportCommand } from "./commands/export";
 import { analyzeCommand } from "./commands/analyze";
+import { authCommand } from "./commands/auth";
+import { pushCommand } from "./commands/push";
+import { viewCommand } from "./commands/view";
+
 const { version } = require("../package.json");
 
 program
@@ -50,5 +54,20 @@ program
   .description("Analyze context doc and generate optimized AI prompt")
   .requiredOption("--model <model>", "Target model: claude or chatgpt")
   .action(analyzeCommand);
+
+program
+  .command("auth")
+  .description("Authenticate with Cliper dashboard")
+  .action(authCommand);
+
+program
+  .command("push")
+  .description("Push context doc to Cliper dashboard")
+  .action(pushCommand);
+
+program
+  .command("view")
+  .description("Open project dashboard in browser")
+  .action(viewCommand);
 
 program.parse(process.argv);
