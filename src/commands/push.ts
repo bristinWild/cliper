@@ -10,6 +10,16 @@ const API_URL = "https://cliperhq.vercel.app/api/push";
 export async function pushCommand(): Promise<void> {
     const projectRoot = process.cwd();
     const contextPath = path.join(getCliperDir(projectRoot), "context.md");
+    const cliperDir = getCliperDir(projectRoot);
+    const promptClaudePath = path.join(cliperDir, "prompt-claude.md");
+    const promptGptPath = path.join(cliperDir, "prompt-gpt.md");
+
+    const promptClaude = fs.existsSync(promptClaudePath)
+        ? fs.readFileSync(promptClaudePath, "utf-8")
+        : null;
+    const promptGpt = fs.existsSync(promptGptPath)
+        ? fs.readFileSync(promptGptPath, "utf-8")
+        : null;
 
     if (!fs.existsSync(contextPath)) {
         console.error(chalk.red("\n  No context doc found. Run cliper init first.\n"));
@@ -35,7 +45,8 @@ export async function pushCommand(): Promise<void> {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`,
             },
-            body: JSON.stringify({ projectName, content }),
+            body: JSON.stringify({ projectName, content, promptClaude, promptGpt }),
+
         });
 
         const data = await res.json() as any;

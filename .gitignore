@@ -2,3 +2,7 @@ node_modules/
 dist/
 .cliper/cache/
 *.js.map
+
+# Cliper — auto-managed
+package-lock.json
+.cliper/prompt-*.md
