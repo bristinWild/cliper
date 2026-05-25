@@ -1,6 +1,6 @@
 {
   "name": "@cliperhq/cliper",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Generate rich, AI-ready context documents from your codebase. Always fresh, always scoped — for Claude, ChatGPT, and beyond.",
   "main": "dist/index.js",
   "bin": {
